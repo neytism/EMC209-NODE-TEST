@@ -5,6 +5,7 @@
 //npm install pg --save
 //node server.js
 //install postman for post
+//npm install jsonwebtoken --save
 
 const {Client} = require('pg');
 
