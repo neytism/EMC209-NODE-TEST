@@ -269,18 +269,20 @@ app.post('/users/updatePassword', (req, res) => {
 app.get('/leaderboard',authenticateToken, (req, res) => {
 
     const topPlayersQuery = `SELECT id, username, email, kills, deaths, 
-                            CASE 
-                                WHEN deaths = 0 THEN CAST(kills AS DECIMAL(10, 1)) 
-                                ELSE ROUND(CAST(kills AS DECIMAL(10, 1)) / CAST(deaths AS DECIMAL(10, 1)), 1)
-                            END AS ratio 
-                            FROM users 
-                            ORDER BY 
-                                CASE WHEN deaths = 0 
-                                    THEN 0 
-                                    ELSE 1 
-                                END, ratio DESC 
-                            LIMIT 10;`;
-    
+                                CASE 
+                                    WHEN deaths = 0 AND kills > 0 THEN CAST(kills AS DECIMAL(10, 1))
+                                    WHEN deaths = 0 THEN 0.0
+                                    ELSE ROUND(CAST(kills AS DECIMAL(10, 1)) / CAST(deaths AS DECIMAL(10, 1)), 1)
+                                END AS ratio 
+                                FROM users 
+                                ORDER BY 
+                                    CASE 
+                                        WHEN deaths = 0 AND kills = 0 THEN 2 
+                                        WHEN deaths = 0 THEN 0
+                                        ELSE 1 
+                                    END, ratio DESC 
+                                LIMIT 10;`;
+                                
     client.query(topPlayersQuery, (err, result)=> {
         if(!err){
             if (result.rows.length > 0) {
@@ -295,9 +297,9 @@ app.get('/leaderboard',authenticateToken, (req, res) => {
 });
 
 app.delete('/users', authenticateToken, (req, res) => {
-
+    
     const id = req.user.userId;
-
+    
     let deleteQuery = `DELETE FROM users WHERE id = '${id}'`;
     client.query(deleteQuery, (err, result)=> {
         if(!err){
@@ -305,6 +307,26 @@ app.delete('/users', authenticateToken, (req, res) => {
         } else{
             console.log(err.message);
         }
+    });
+    
+    client.end;
+});
+
+app.get('/users/kills/:id', (req, res) => {
+    client.query(`UPDATE users SET kills = kills + 1 WHERE id = '${req.params.id}'`, (err, result)=> {
+        if(err){
+            console.log(err.message);
+        } 
+    });
+    
+    client.end;
+});
+
+app.get('/users/deaths/:id', (req, res) => {
+    client.query(`UPDATE users SET deaths = deaths + 1 WHERE id = '${req.params.id}'`, (err, result)=> {
+        if(err){
+            console.log(err.message);
+        } 
     });
     
     client.end;
